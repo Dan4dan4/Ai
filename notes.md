@@ -44,5 +44,15 @@ Each chunk:
                     -but factually incorrect or made-up information
 
 Hallucinations happen because LLMs do not know facts, they predict the next token based on probabilities and not truth.
-LLMs ARE OPTIMIZED FOR FLUENCY NOT ACCURACY.
+# LLMs ARE OPTIMIZED FOR FLUENCY NOT ACCURACY.
 
+common causes for hallucinations are -
+    -missing or weak context
+    -asking about data the model doesnt have
+    -vague prompts
+    -overly long context
+    -conflicting retrieved chunks
+    -asking for citations when none exist
+
+RAG reduced hallucinations by supplying a real source text, constraining the model, grounding responses in retrieved data
+example prompt- "Answer ONLY using the provided context. If the answer is not present, say ‘I don’t know."
