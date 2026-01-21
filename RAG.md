@@ -24,6 +24,9 @@ this is keyword/vector search- for retrieval there are 2 very popular keyword se
 semantic search- search that understands meaning not words given to it.
     example- search for furniture and it will understand what furnite(desk, chair etc) and then it will search based on that rather than search for the actual word "furniture"
 ## see sentence_similarity.py
+
+An embedding is a numerical representation of something (like text, image, audio, or graph) in the form of a vector (a list of numbers). Instead of storing raw text or images, you convert it to a vector of numbers. These numbers capture the meaning or features of the data.
+
 Embedding models- takes text and converts it into vectors/numbers to give it meaning.
 
 Vector databases- are instant, relevant results
@@ -49,7 +52,6 @@ PQ (Product Quantization):Compresses vectors into smaller codes for faster dista
 
 Vector databases are specialized databases designed to store and search high-dimensional vectors (embeddings). Unlike traditional databases that store text, numbers, or structured data, vector databases are optimized for similarity search.
 
-An embedding is a numerical representation of something (like text, image, audio, or graph) in the form of a vector (a list of numbers). Instead of storing raw text or images, you convert it to a vector of numbers. These numbers capture the meaning or features of the data.
 
 Key benefits of vector databases-Store millions of embeddings efficiently
                                 -Fast similarity search across all vectors
