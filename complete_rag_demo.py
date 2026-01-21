@@ -406,3 +406,7 @@ if __name__ == "__main__":
     
     print("\n🎉 All demos completed!")
     print("You've seen how the complete RAG pipeline works!")
+
+
+query = input("Ask a question: ")
+run_complete_rag_pipeline(query)

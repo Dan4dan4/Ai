@@ -62,6 +62,11 @@ popular vectordbs-
 chroma is python friendly/free/opensource but not for production
 pinecone is a manage service, you send queries and they do the computations for you and bill you
 
+Cosine similarity is used because embedding models encode semantic meaning in vector direction rather than magnitude. Cosine compares the angle between vectors, making it robust to differences in sentence length and embedding scale, which improves semantic retrieval quality
+
+I store metadata like document source, page number, section title, timestamp, and access permissions. Metadata enables filtering, auditing, hybrid search, and helps explain where an answer came from
+
+I explicitly instruct the model to answer only using the provided context and to respond with ‘I don’t know’ if the answer isn’t present. This prevents leakage from pretrained knowledge.
 
 # RAG PIPELINE
 
@@ -82,3 +87,4 @@ To handle RAGs at full capacity:
     -try simple text matching, if it fails
     -send a helpful message such as "Service temporarily unavailable. Please try again later"
 
+Wrong answers usually come from retrieval failure, poor chunking, low-quality embeddings, or prompt leakage. I debug by inspecting retrieved chunks, checking similarity scores, validating chunk boundaries, and testing retrieval independently from generation.
