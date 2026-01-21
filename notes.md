@@ -69,3 +69,5 @@ common causes for hallucinations are -
 
 RAG reduced hallucinations by supplying a real source text, constraining the model, grounding responses in retrieved data
 example prompt- "Answer ONLY using the provided context. If the answer is not present, say ‘I don’t know."
+
+

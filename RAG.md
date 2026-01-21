@@ -63,3 +63,7 @@ chroma is python friendly/free/opensource but not for production
 pinecone is a manage service, you send queries and they do the computations for you and bill you
 
 
+RAG PIPELINE-
+
+Gets specific documents -> chunks them into small pieces(500chars,50word overlap),converts them into embeddings using open ai and embedding models -> loads them into a vector db 
+
