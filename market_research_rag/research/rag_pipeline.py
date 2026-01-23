@@ -21,12 +21,15 @@ def load_and_chunk_docs():
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size = 500,
         chunk_overlap = 50,
+        # we are defining how chunk is measured and its by len, token is also an option
         length_function = len,
+        # "\n\n" is paragraphs, "\n" is lines, " " is words, "" is characters
         separators = ["\n\n", "\n", " ", ""])
     
     all_chunks = []
 
     for doc in documents:
+        # use the spliting structure i defined and split the text
         chunks = text_splitter.split_text(doc.content)
         for i, chunk in enumerate(chunks):
             all_chunks.append({
