@@ -93,3 +93,20 @@ def vector_db(chunks: List[Dict]):
         print(f"Collection already contains {collection.count()} chunks")
 
     return collection
+
+# Query Processing
+
+def process_query(query: str):
+    """
+    process user query and convert to embeddings(numbers) for vector search
+    """
+
+    model = SentenceTransformer("all-MiniLM-L6-v2")
+
+    # lower cased and stripped to remove accidental whitespace. prevents embedding noise problems
+    cleaned_query = query.lower().strip()
+
+    # this is what we will pass into chromadb
+    query_embedding = model.encode([cleaned_query])
+
+    return query_embedding
