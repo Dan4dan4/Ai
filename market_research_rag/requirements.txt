@@ -1,5 +1,27 @@
+# Django framework
+Django>=4.2
+
+# Vector database
 chromadb
+
+# Text embedding and splitting
 sentence-transformers
 langchain
+
+# Numerical computing
 numpy
-Django> =4.2
+
+# Hugging Face LLM
+transformers
+torch   # Required backend for Hugging Face models
+
+# Optional: PDF and Word doc parsing for uploads
+pdfplumber
+python-docx
+
+# Optional: for async processing or web requests if needed
+requests
+
+
+# to run all do this  
+# pip install -r requirements.txt
