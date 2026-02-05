@@ -9,9 +9,12 @@ from research.models import Document
 from transformers import pipeline
 
 # global hugging face pipeline(used for generate response)
-# =====================================================
+
+# create text generation pipeline using a hugging face
 generator = pipeline(
+     # this model receives text and returns text
     task="text2text-generation",
+    # this is a free model that does not require api keys
     model="google/flan-t5-base"
 )
 
@@ -204,4 +207,24 @@ def generate_response(augmented_prompt: str) -> str:
     This is the real LLM step of the RAG pipeline.
     """
 
-    
+    # create text generation pipeline using a hugging face
+    try:
+        # call the model with controlled parameters
+        # we are sending the augmented prompt, max length, and temperature controls
+        # do_sample means enable sampling for varied outputs
+        # creativity, low value= more facts and is strict
+        output = generator(
+            augmented_prompt,
+            max_length=512,
+            do_sample=True,
+            temperature=0.2
+        )
+        # this will return a list, we will extract the 1st result
+        response = output[0]["generated_text"]
+        
+    # incase model doesnt load, network issues
+    except Exception as e:
+        response = f"Error generating response: {e}"
+
+    return response
+
