@@ -24,6 +24,7 @@ requests
 
 djangorestframework>=3.15
 
-
+# for pdf/text parsing
+PyPDF2
 # to run all do this  
 # pip install -r requirements.txt

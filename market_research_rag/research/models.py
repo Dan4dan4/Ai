@@ -1,11 +1,12 @@
 from django.db import models
+from django.utils import timezone
 
 # Create your models here.
 class Document(models.Model):
     title = models.CharField(max_length=200)
     company = models.CharField(max_length=200)
     doc_type = models.CharField(max_length=50)
-    date_filed = models.DateField()
+    date_filed = models.DateTimeField(default=timezone.now) 
     content = models.TextField()
     source_url = models.URLField(blank=True, null=True)
     chunks_generated = models.BooleanField(default=False)

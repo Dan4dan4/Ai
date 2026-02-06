@@ -6,6 +6,11 @@ from .models import Document
 from .serializers import DocumentSerializer
 from .rag_pipeline import run_rag_pipeline
 from rest_framework.parsers import MultiPartParser, FormParser
+from PyPDF2  import PdfReader
+from datetime import date
+import PyPDF2
+from django.utils import timezone
+import re
 
 # Create your views here.
 
@@ -42,18 +47,49 @@ def ask_rag(request):
     return Response({"answer": answer})
 
 # allows the upload of documents via API
+
+def extract_text(file):
+    """Extract text from .txt or .pdf files"""
+    if file.name.endswith(".txt"):
+        return file.read().decode("utf-8")
+    elif file.name.endswith(".pdf"):
+        reader = PdfReader(file)
+        text = ""
+        for page in reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
+        return text
+    else:
+        return ""
+    
+
 @api_view(["POST"])
-@parser_classes([MultiPartParser, FormParser])
 def upload_document(request):
     file = request.FILES.get("file")
     if not file:
         return Response({"error": "No file uploaded"}, status=400)
 
+    # extract content
+    if file.name.endswith(".pdf"):
+        reader = PyPDF2.PdfReader(file)
+        content = ""
+        for page in reader.pages:
+            text = page.extract_text() or ""
+            content += text + " "
+    else:
+        content = file.read().decode("utf-8")
+
+    # clean extra newlines, tabs, multiple spaces
+    content = re.sub(r'\s+', ' ', content).strip()
+
+    # store in DB
     Document.objects.create(
         title=file.name,
         company="Unknown",
         doc_type="uploaded",
-        content=file.read().decode("utf-8") 
+        content=content,
+        date_filed=timezone.now()  
     )
 
     return Response({"status": "success"})

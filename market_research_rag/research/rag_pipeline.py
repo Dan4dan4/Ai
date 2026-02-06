@@ -31,8 +31,8 @@ def load_and_chunk_docs():
 
     # the structure of how my splitting is designed
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size = 500,
-        chunk_overlap = 50,
+        chunk_size = 250,
+        chunk_overlap = 30,
         # we are defining how chunk is measured and its by len, token is also an option
         length_function = len,
         # "\n\n" is paragraphs, "\n" is lines, " " is words, "" is characters
