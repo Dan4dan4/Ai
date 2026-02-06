@@ -26,3 +26,16 @@ def query_rag(request):
 
     response = run_rag_pipeline(query)
     return Response({"response": response})
+
+
+@api_view(['POST'])
+def ask_rag(request):
+
+    query = request.data.get("query")
+
+    if not query:
+        return Response({"error": "Query is required"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    answer = run_rag_pipeline(query)
+
+    return Response({"answer": answer})
