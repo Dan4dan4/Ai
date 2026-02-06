@@ -31,7 +31,7 @@ export default function QueryBox() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Ask something from documents"
+          placeholder="Ask me anything!"
         />
 
         <button type="submit">
