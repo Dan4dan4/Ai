@@ -64,6 +64,8 @@ def extract_text(file):
         return ""
     
 
+TEMP_DOCS = []
+
 @api_view(["POST"])
 def upload_document(request):
     file = request.FILES.get("file")
@@ -80,16 +82,16 @@ def upload_document(request):
     else:
         content = file.read().decode("utf-8")
 
-    # clean extra newlines, tabs, multiple spaces
+    # clean extra whitespace
     content = re.sub(r'\s+', ' ', content).strip()
 
-    # store in DB
-    Document.objects.create(
-        title=file.name,
-        company="Unknown",
-        doc_type="uploaded",
-        content=content,
-        date_filed=timezone.now()  
-    )
+    # store in-memory for this session only
+    TEMP_DOCS.append({
+        "title": file.name,
+        "company": "Unknown",
+        "doc_type": "uploaded",
+        "content": content,
+        "date_filed": None  # optional
+    })
 
     return Response({"status": "success"})

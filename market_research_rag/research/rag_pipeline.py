@@ -7,6 +7,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import numpy as np
 from research.models import Document
 from transformers import pipeline
+import re
 
 # global hugging face pipeline(used for generate response)
 
@@ -18,21 +19,28 @@ generator = pipeline(
     model="google/flan-t5-base"
 )
 
+# to clean the text from whitespaces and newlines with a single space
+def clean_text(text):
+    # replace multiple whitespaces/newlines with single space
+    text = re.sub(r'\s+', ' ', text)
+    # remove weird unicode characters
+    text = re.sub(r'[^\x00-\x7F]+', '', text)
+    return text.strip()
 
 # DOC LOADING AND CHUNKING
 
-def load_and_chunk_docs():
+def chunk_documents(documents: List[Dict], chunk_size: int = 600, chunk_overlap: int = 50) -> List[Dict]:
     """
     Load documents and chunk them into pieces
     chunk size is 500words, with an overlap of 50words
     """
-    # import the document
-    documents = Document.objects.all()
+    # import the document #REMOVED SINCE WE DONT WANT TO SAVE DOCS TO DB
+    # documents = Document.objects.all()
 
     # the structure of how my splitting is designed
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size = 250,
-        chunk_overlap = 30,
+        chunk_size = chunk_size,
+        chunk_overlap = chunk_overlap,
         # we are defining how chunk is measured and its by len, token is also an option
         length_function = len,
         # "\n\n" is paragraphs, "\n" is lines, " " is words, "" is characters
@@ -40,19 +48,18 @@ def load_and_chunk_docs():
     
     all_chunks = []
 
-    for doc in documents:
-        # use the spliting structure i defined and split the text
-        chunks = text_splitter.split_text(doc.content)
+    for doc_index, doc in enumerate(documents):
+        chunks = text_splitter.split_text(clean_text(doc["content"]))
         for i, chunk in enumerate(chunks):
             all_chunks.append({
-                "document_id": doc.id,
+                "document_id": doc_index,
                 "chunk_index": i,
                 "content": chunk,
                 "metadata": {
-                    "title": doc.title,
-                    "company": doc.company,
-                    "doc_type": doc.doc_type,
-                    "date_filed": str(doc.date_filed)
+                    "title": doc["title"],
+                    "company": doc["company"],
+                    "doc_type": doc["doc_type"],
+                    "date_filed": str(doc["date_filed"])
                 }
             })
     return all_chunks
@@ -69,41 +76,46 @@ def vector_db(chunks: List[Dict]):
     This is basically creating the brain of our RAG, this is the only data the RAG will ever generate responses off of.
     """
 
-    # this is how you initialize a chromadb client
-    client= chromadb.Client()
+    # initialize chromadb client
+    client = chromadb.Client()
 
-    # this tries to create a collection in chromadb call "financial_documents"
+    # try to create a collection in chromadb called "financial_documents"
     try:
         # collection in chromadb is a table database that holds all your doc chunks and embeddings
         collection = client.create_collection(
             name="financial_documents",
-            # tells chroma to use cosine similarity for vector comparisions
+            # tells chroma to use cosine similarity for vector comparisons
             metadata={"hnsw:space": "cosine"}
         )
     # if collection already exists just retrieve it 
     except Exception:
         collection = client.get_collection("financial_documents")
 
+    # initialize embedding model
     # all-MiniLM-L6-v2 is the model that converts text into numeric vectors that captures semantic meaning
     model = SentenceTransformer("all-MiniLM-L6-v2")
-    # all-MiniLM-L6-v2 converts chunk texts into vector of numbers and then numpy uses "tolist" to convert those 
-    # numbers into a list
+
+    # convert chunk texts into numeric embeddings
+    # numpy tolist converts embeddings from arrays to plain lists
     embeddings = [model.encode(chunk["content"]).tolist() for chunk in chunks]
 
-    # failsafe if statement to prevent duplication
+    # failsafe to prevent duplication
     if collection.count() == 0:
-        # chromadb table db adds ids, documents, embeddings(numeric vector of chunks), metadata into 1 table collection
+        # add chunks, embeddings, and metadata into chromadb collection
+        # collection.add stores ids, documents, embeddings, and metadata in one table
         collection.add(
             ids=[f"{chunk['document_id']}_{chunk['chunk_index']}" for chunk in chunks],
             documents=[chunk["content"] for chunk in chunks],
             embeddings=embeddings,
             metadatas=[chunk["metadata"] for chunk in chunks]
         )
-        # Stored 10 chunks in ChromaDB collection financial_documents
+        # log how many chunks were stored
         print(f"Stored {len(chunks)} chunks in ChromaDB collection '{collection.name}'")
     else:
+        # if collection already has data, just report count
         print(f"Collection already contains {collection.count()} chunks")
 
+    # return collection object for further usage
     return collection
 
 # Query Processing
@@ -127,7 +139,7 @@ def process_query(query: str):
 
 # the collection is the brain of the documents provided and the query_embedding is the numerical 
 # vector of the question asked. top_k controls how many chunks we retrieve. more chunks = more noise
-def search_vector(collection, query_embedding, top_k: int =3):
+def search_vector(collection, query_embedding, top_k=3):
     """
     this will search and compare query_embedding to every stored chunk embedding and rank them based on 
     cosine since we defined that. this function returns chunk text/metadata.
@@ -139,6 +151,15 @@ def search_vector(collection, query_embedding, top_k: int =3):
         # give me the top_k results
         n_results = top_k
     )
+
+    docs = results['documents'][0]
+    metas = results['metadatas'][0]
+
+    filtered = [
+        {"content": doc, "metadata": meta}
+        for doc, meta in zip(docs, metas)
+        if len(doc.strip()) > 20  # ignore very short chunks
+    ]
 
     return results
 
@@ -228,7 +249,7 @@ def generate_response(augmented_prompt: str) -> str:
 
     return response
 
-def run_rag_pipeline(query: str, top_k: int = 3):
+def run_rag_pipeline(uploaded_docs: List[Dict], query: str, top_k: int = 3):
     """
     Run the full RAG pipeline:
     1. Load documents and chunk
@@ -239,8 +260,11 @@ def run_rag_pipeline(query: str, top_k: int = 3):
     6. Generate response via Hugging Face
     """
 
+    if not uploaded_docs:
+        return "No documents uploaded."
+    
     # Step 1: load and chunk docs
-    chunks = load_and_chunk_docs()
+    chunks = chunk_documents(uploaded_docs)
     if not chunks:
         print("No documents found in DB.")
         return "No documents available."
@@ -254,11 +278,13 @@ def run_rag_pipeline(query: str, top_k: int = 3):
     # Step 4: search the vector database
     results = search_vector(collection, query_embedding, top_k=top_k)
 
-    # Step 5: build augmented context for LLM
-    docs_and_metadata = [
-    {"content": doc, "metadata": meta[0] if isinstance(meta, list) else meta}
-    for doc, meta in zip(results['documents'], results['metadatas'])
-    ]
+    # Step 5: build docs_and_metadata safely
+    docs_and_metadata = []
+    for doc_list, meta_list in zip(results.get('documents', []), results.get('metadatas', [])):
+        for doc, meta in zip(doc_list, meta_list):
+            if isinstance(meta, list) and len(meta) == 1:
+                meta = meta[0]
+            docs_and_metadata.append({"content": doc, "metadata": meta})
 
     # Step 6: build augmented prompt for LLM
     augmented_prompt = augment_context(query, docs_and_metadata)
