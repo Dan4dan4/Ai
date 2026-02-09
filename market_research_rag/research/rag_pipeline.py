@@ -206,7 +206,9 @@ RULES:
 - Use ONLY the information in the context below
 - If the answer is not present, say "I don't know based on the provided documents"
 - Do NOT use outside knowledge to answer
-- Cite which Source you used
+- Cite which Source(s) you used in your answer (e.g., Source 1, Source 3)
+- Be concise and factual
+- Keep it simple and straightforward
 
 CONTEXT:
 {context}
@@ -237,8 +239,10 @@ def generate_response(augmented_prompt: str) -> str:
         output = generator(
             augmented_prompt,
             max_length=512,
-            do_sample=True,
-            temperature=0.2
+            # do sample FALSE means always pick the most likely next token and TRUE means allow for randomness and creativity so it will give you diff answer each times
+            do_sample=False,
+            # low number means more focused and deterministic, high number means more creative but also more likely to hallucinate
+            temperature=0.0
         )
         # this will return a list, we will extract the 1st result
         response = output[0]["generated_text"]
