@@ -279,12 +279,14 @@ def run_rag_pipeline(uploaded_docs: List[Dict], query: str, top_k: int = 3):
     results = search_vector(collection, query_embedding, top_k=top_k)
 
     # Step 5: build docs_and_metadata safely
-    docs_and_metadata = []
-    for doc_list, meta_list in zip(results.get('documents', []), results.get('metadatas', [])):
-        for doc, meta in zip(doc_list, meta_list):
-            if isinstance(meta, list) and len(meta) == 1:
-                meta = meta[0]
-            docs_and_metadata.append({"content": doc, "metadata": meta})
+    # docs_and_metadata = []
+    # for doc_list, meta_list in zip(results.get('documents', []), results.get('metadatas', [])):
+    #     for doc, meta in zip(doc_list, meta_list):
+    #         if isinstance(meta, list) and len(meta) == 1:
+    #             meta = meta[0]
+    #         docs_and_metadata.append({"content": doc, "metadata": meta})
+    # Step 5: search_vector already returns cleaned format
+    docs_and_metadata = results
 
     # Step 6: build augmented prompt for LLM
     augmented_prompt = augment_context(query, docs_and_metadata)
