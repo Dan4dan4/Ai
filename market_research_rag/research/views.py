@@ -12,6 +12,7 @@ import PyPDF2
 from django.utils import timezone
 import re
 import chromadb
+import pdfplumber
 
 
 # Create your views here.
@@ -54,17 +55,24 @@ def ask_rag(request):
 # allows the upload of documents via API
 def extract_text(file):
     """
-    Extract text from .txt or .pdf files
+    Extract text and tables from PDF using pdfplumber
     """
     if file.name.endswith(".txt"):
         return file.read().decode("utf-8")
     elif file.name.endswith(".pdf"):
-        reader = PdfReader(file)
         text = ""
-        for page in reader.pages:
-            page_text = page.extract_text()
-            if page_text:
+        with pdfplumber.open(file) as pdf:
+            for page in pdf.pages:
+                # extract text
+                page_text = page.extract_text() or ""
                 text += page_text + "\n"
+
+                # extract tables if any
+                tables = page.extract_tables()
+                for table in tables:
+                    # convert table rows into string
+                    for row in table:
+                        text += " | ".join([str(cell) for cell in row if cell]) + "\n"
         return text
     else:
         return ""
@@ -72,25 +80,21 @@ def extract_text(file):
 @api_view(["POST"])
 def upload_document(request):
     """
-    Accepts file upload, extracts text, stores in TEMP_DOCS only
+    Accepts file upload, extracts text and tables now using pdfplumber, stores in TEMP_DOCS only
     """
+    global TEMP_DOCS
+
     file = request.FILES.get("file")
     if not file:
         return Response({"error": "No file uploaded"}, status=400)
 
-    if file.name.endswith(".pdf"):
-        reader = PyPDF2.PdfReader(file)
-        content = ""
-        for page in reader.pages:
-            text = page.extract_text() or ""
-            content += text + " "
-    else:
-        content = file.read().decode("utf-8")
+    # use extract_text function which handles both txt and pdf with tables
+    content = extract_text(file)
 
-    #clean extra whitespace
+    # clean extra whitespace
     content = re.sub(r'\s+', ' ', content).strip()
 
-    #new way- instead of using db we will use a temp doc placeholder
+    # store in TEMP_DOCS (memory)
     TEMP_DOCS.append({
         "title": file.name,
         "company": "Unknown",
@@ -98,6 +102,7 @@ def upload_document(request):
         "content": content,
         "date_filed": None
     })
+
     return Response({
         "status": "success",
         "loaded_docs": len(TEMP_DOCS)
