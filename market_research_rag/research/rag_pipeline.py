@@ -27,9 +27,13 @@ def clean_text(text):
     text = re.sub(r'[^\x00-\x7F]+', '', text)
     return text.strip()
 
+# remove repeated numeric/financial sentences
+def clean_response(response: str) -> str:
+    return re.sub(r'(\b[A-Za-z0-9.,%$]+\b)( \1)+', r'\1', response)
+
 # DOC LOADING AND CHUNKING
 
-def chunk_documents(documents: List[Dict], chunk_size: int = 600, chunk_overlap: int = 50) -> List[Dict]:
+def chunk_documents(documents: List[Dict], chunk_size: int = 300, chunk_overlap: int = 50) -> List[Dict]:
     """
     Load documents and chunk them into pieces
     chunk size is 500words, with an overlap of 50words
@@ -182,15 +186,20 @@ def augment_context(query: str, search_results: List[Dict]) -> str:
     
     # each chunk that will be helpfull will be stored here
     context_blocks = []
+    # creating a set so it doesnt repeat the same chunk over and over
+    seen_contents = set()
 
     # loop through chunk and source them as: 
     for i, result in enumerate(search_results, 1):
+        content = result['content'].strip()
+        if content in seen_contents:
+            continue  # skip duplicates
+        seen_contents.add(content)
         context_blocks.append(
-            # Source 1, Source 2, Source 3
             f"Source {i}:\n"
             f"Company: {result['metadata']['company']}\n"
             f"Document Type: {result['metadata']['doc_type']}\n"
-            f"Content:\n{result['content']}"
+            f"Content:\n{content}"
         )
 
     # Combines all chunk strings into 1 big block context section separated by blank lines
@@ -203,12 +212,13 @@ def augment_context(query: str, search_results: List[Dict]) -> str:
 You are a financial research assistant.
 
 RULES:
-- Use ONLY the information in the context below
+- Use the information in the context below to answer as best you can
 - If the answer is not present, say "I don't know based on the provided documents"
 - Do NOT use outside knowledge to answer
-- Cite which Source(s) you used in your answer (e.g., Source 1, Source 3)
 - Be concise and factual
 - Keep it simple and straightforward
+- If you find an answer, do not repeat it more than once, just give the answer directly
+- If you see an out of context answer, provide full context in your answer to justify it
 
 CONTEXT:
 {context}
@@ -239,10 +249,12 @@ def generate_response(augmented_prompt: str) -> str:
         output = generator(
             augmented_prompt,
             max_length=512,
+            # give short answers, we want concise and to the point responses, not long essays
+            max_new_tokens=256,
             # do sample FALSE means always pick the most likely next token and TRUE means allow for randomness and creativity so it will give you diff answer each times
             do_sample=False,
             # low number means more focused and deterministic, high number means more creative but also more likely to hallucinate
-            temperature=0.0
+            temperature=0.1
         )
         # this will return a list, we will extract the 1st result
         response = output[0]["generated_text"]
@@ -289,6 +301,8 @@ def run_rag_pipeline(uploaded_docs: List[Dict], query: str, top_k: int = 3):
     #         if isinstance(meta, list) and len(meta) == 1:
     #             meta = meta[0]
     #         docs_and_metadata.append({"content": doc, "metadata": meta})
+
+    
     # Step 5: search_vector already returns cleaned format
     docs_and_metadata = results
 
@@ -297,5 +311,6 @@ def run_rag_pipeline(uploaded_docs: List[Dict], query: str, top_k: int = 3):
 
     # Step 7: generate response using hugging face
     response = generate_response(augmented_prompt)
+    response = clean_response(response)
 
     return response
