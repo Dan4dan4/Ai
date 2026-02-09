@@ -76,22 +76,30 @@ def upload_document(request):
     if not file:
         return Response({"error": "No file uploaded"}, status=400)
 
-    # extract content
-    content = extract_text(file)
+    if file.name.endswith(".pdf"):
+        reader = PyPDF2.PdfReader(file)
+        content = ""
+        for page in reader.pages:
+            text = page.extract_text() or ""
+            content += text + " "
+    else:
+        content = file.read().decode("utf-8")
 
-    # clean extra whitespace
+    #clean extra whitespace
     content = re.sub(r'\s+', ' ', content).strip()
 
-    # store in-memory for this session only
+    #new way- instead of using db we will use a temp doc placeholder
     TEMP_DOCS.append({
         "title": file.name,
         "company": "Unknown",
         "doc_type": "uploaded",
         "content": content,
-        "date_filed": None  # optional
+        "date_filed": None
     })
-
-    return Response({"status": "success"})
+    return Response({
+        "status": "success",
+        "loaded_docs": len(TEMP_DOCS)
+    })
 
 #clear TEMP_DOCS for a fresh session
 @api_view(["POST"])

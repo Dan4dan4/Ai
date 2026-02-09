@@ -152,16 +152,16 @@ def search_vector(collection, query_embedding, top_k=3):
         n_results = top_k
     )
 
-    docs = results['documents'][0]
-    metas = results['metadatas'][0]
+    docs_and_metadata = results
+
 
     filtered = [
         {"content": doc, "metadata": meta}
-        for doc, meta in zip(docs, metas)
+        for doc, meta in zip(docs_and_metadata['documents'][0], docs_and_metadata['metadatas'][0])
         if len(doc.strip()) > 20  # ignore very short chunks
     ]
 
-    return results
+    return filtered
 
 #  Context Augmentation
 
